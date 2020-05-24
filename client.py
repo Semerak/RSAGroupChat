@@ -1,7 +1,12 @@
 import socket
 import time
 
+# choose crypto or crypto_simple
+# crypto - faster
+# from crypto import *
+# crypto_simple - easier to understood
 from crypto_simple import *
+
 from _thread import *
 
 name = input("Your name: ")
