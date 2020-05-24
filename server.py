@@ -7,7 +7,7 @@ ServerSocket = socket.socket()
 host = '127.0.0.1'
 port = 1233
 ThreadCount = 0
-message = [""]
+# message = [""]
 clients = {}
 pks = {}
 lock = allocate_lock()
@@ -21,7 +21,12 @@ ServerSocket.listen(5)
 
 
 def send_all_pks(connection):
+    time.sleep(1)
+    connection.sendall(str.encode("Sending new dictionary of people"))
+    # connection.sendall(str.encode("Sending new dictionary of people"))
     cur_pks = pks.copy()
+    time.sleep(1)
+    print(len(cur_pks))
     connection.sendall(len(cur_pks).to_bytes(10, byteorder='big'))
     time.sleep(0.1)
     for name in cur_pks:
@@ -33,7 +38,16 @@ def send_all_pks(connection):
         time.sleep(0.1)
 
 
-def threaded_client(connection, mes):
+def send_message(name, text):
+    if name == "all":
+        for cl in clients:
+            clients[cl].sendall(str.encode(text))
+    elif name in clients:
+        print("send to ", name, " from ", text)
+        clients[name].sendall(str.encode(text))
+
+
+def threaded_client(connection, ):
     # connection.send(str.encode('Welcome to the Server\n'))
     data = connection.recv(2048)
     name = data.decode('utf-8')
@@ -53,41 +67,52 @@ def threaded_client(connection, mes):
         # reply = data.decode('utf-8')
         if not data:
             break
-        lock.acquire()
-        mes[0] = data
-        lock.release()
-        last_data = data
-        if data.decode('utf-8') == "EXIT":
-            break
+        # lock.acquire()
+        # mes[0] = data
+        # lock.release()
+        # last_data = data
+        try:
+            message = data.decode('utf-8')
+            print(message)
+            if message == "EXIT":
+                break
+            elif message == "PEOPLE":
+                send_all_pks(connection)
+            elif "<" in message:
+                name_to, text = message.split("<", 1)
+                send_message(name_to, name+": "+text)
+        except:
+            continue
+
         # connection.sendall(str.encode(reply))
     lock.acquire()
-    clients.remove(connection)
+    del clients[name]
     lock.release()
     connection.close()
 
 
-def thread_broadcast():
-    last_mess = ""
-    print("Listening")
-    while True:
-        cur_mess = message[0]
-        if last_mess != cur_mess:
-            print(cur_mess.decode('utf-8'))
-            for cl in clients:
-                try:
-                    clients[cl].sendall(cur_mess)
-                except:
-                    continue
-            last_mess = cur_mess
+# def thread_broadcast():
+#     last_mess = ""
+#     print("Listening")
+#     while True:
+#         cur_mess = message[0]
+#         if last_mess != cur_mess:
+#             print(cur_mess.decode('utf-8'))
+#             for cl in clients:
+#                 try:
+#                     clients[cl].sendall(cur_mess)
+#                 except:
+#                     continue
+#             last_mess = cur_mess
 
 
-start_new_thread(thread_broadcast, ())
+# start_new_thread(thread_broadcast, ())
 
 while True:
     print("Searching")
     Client, address = ServerSocket.accept()
     print('Connected to: ' + address[0] + ':' + str(address[1]))
-    start_new_thread(threaded_client, (Client, message,))
+    start_new_thread(threaded_client, (Client,))
     ThreadCount += 1
     print('Thread Number: ' + str(ThreadCount))
 ServerSocket.close()
