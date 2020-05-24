@@ -30,6 +30,20 @@ print("Connected!")
 read = True
 
 
+def tutorial():
+    print("""
+    PEOPLE - update all information about users in network
+    [name]<[text] - send encrypted message to person
+    [name_group]<[text] - send encrypted message to group
+    GROUPS - update information about groups, you are in
+    GROUP CREATE "[name_group]":[name_user1],[name_user2] - create new group
+    GROUP ADD "[name_group]:[name_user1],[name_user2] - add users to group
+    GROUP REMOVE "[name_group]:[name_user1],[name_user2] - remove users from group
+    EXIT - to exit messenger 
+    ? - open tutorial
+    """)
+
+
 def update_groups(connection):
     data = connection.recv(2048)
     text = data.decode('utf-8')
@@ -109,7 +123,7 @@ time.sleep(0.1)
 # read current clients
 
 update_clients(SocketServer)
-
+tutorial()
 while True:
     value = input()
     if value == "MY GROUPS":
@@ -169,6 +183,8 @@ while True:
     elif value == "PEOPLE":
         SocketServer.send(str.encode(value))
         update_clients(SocketServer)
+    elif value =="?":
+        tutorial()
     else:
         SocketServer.send(str.encode(value))
 
