@@ -84,7 +84,6 @@ SocketServer.sendall(myPK.n.to_bytes(1024, byteorder='big'))
 time.sleep(0.1)
 # read current clients
 
-
 update_clients(SocketServer)
 
 while True:
@@ -94,6 +93,8 @@ while True:
         if name_to in clients:
             encrypt_text = clients[name_to].encrypt(text, to_int)
             SocketServer.sendall(str.encode(name_to + "<" + str(encrypt_text)))
+        else:
+            SocketServer.send(str.encode(value))
     elif value == "EXIT":
         SocketServer.send(str.encode(value))
         break
