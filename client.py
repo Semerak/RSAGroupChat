@@ -1,7 +1,7 @@
 import socket
 import time
 
-from crypto import *
+from crypto_simple import *
 from _thread import *
 
 name = input("Your name: ")
