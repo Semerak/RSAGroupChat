@@ -14,6 +14,7 @@ print("Welcome ", myPK.name)
 print("e: ", myPK.e)
 print("n: ", myPK.n)
 clients = {}
+groups = {}
 SocketServer = socket.socket()
 
 host = '127.0.0.1'
@@ -29,21 +30,44 @@ print("Connected!")
 read = True
 
 
+def update_groups(connection):
+    data = connection.recv(2048)
+    text = data.decode('utf-8')
+    new_groups = {}
+    new_groups_text = text.split(";")
+    for new_group_text in new_groups_text:
+        new_name, members_text = new_group_text.split(":")
+        try:
+            new_group=Group()
+            for mem_name in members_text.split(","):
+                new_group.add(clients[mem_name])
+            new_groups[new_name]=new_group
+            print(new_group_text)
+        except:
+            print("Problem with group ",new_name)
+    global groups
+    groups = new_groups
+
+
 def wait_for_message(connection):
     global read
     while read:
-        string_to_print = ""
-        Response = connection.recv(1024)
-        full_message = Response.decode('utf-8')
-        if ":" in full_message:
-            name_from, text = full_message.split(":")
-            global clients
-            if name_from in clients:
+        try:
+            string_to_print = ""
+            Response = connection.recv(1024)
+            full_message = Response.decode('utf-8')
+            if full_message == "GROUPS":
+                update_groups(connection)
+            elif ":" in full_message:
+                name_from, text = full_message.split(":")
+                global clients
                 decrypt_text = Cryp.decrypt(int(text), to_str)
                 string_to_print = name_from + ": " + decrypt_text
-        if string_to_print == "":
-            string_to_print = full_message
-        print(string_to_print)
+            if string_to_print == "":
+                string_to_print = full_message
+            print(string_to_print)
+        except:
+            continue
 
 
 def update_clients(connection):
@@ -84,16 +108,59 @@ SocketServer.sendall(myPK.n.to_bytes(1024, byteorder='big'))
 time.sleep(0.1)
 # read current clients
 
-
 update_clients(SocketServer)
 
 while True:
     value = input()
-    if "<" in value:
+    if value == "MY GROUPS":
+        print("current groups:")
+        for gr_name in groups:
+            string_for_group = gr_name + ": "
+            for pk in groups[gr_name].get():
+                string_for_group += pk.name + " "
+            print(string_for_group)
+    elif "GROUPS" == value:
+        SocketServer.send(str.encode(value))
+
+    elif "GROUP" in value:
+        if "CREATE" in value:
+            SocketServer.send(str.encode(value))
+            # group_name, group_members = value.split(":", 1)
+            # group_name = group_name.split("\"")[1]
+            # members = group_members.split(",")
+            #groups[group_name] = Group()
+            # mem in members:
+            #    groups[group_name].add(clients[mem])
+        elif "ADD" in value:
+            group_name = value.split("\"")[1]
+            group_members = value.split(":")[1]
+            members = group_members.split(",")
+            if clients[name] in groups[group_name].get():
+                for mem in members:
+                    groups[group_name].add(clients[mem])
+            else:
+                print("You don`t have an access")
+        elif "REMOVE" in value:
+            group_name = value.split("\"")[1]
+            group_members = value.split(":")[1]
+            members = group_members.split(",")
+            if clients[name] in groups[group_name].get():
+                for mem in members:
+                    groups[group_name].remove(clients[mem])
+            else:
+                print("You don`t have an access")
+
+
+    elif "<" in value:
         name_to, text = value.split("<", 1)
         if name_to in clients:
             encrypt_text = clients[name_to].encrypt(text, to_int)
             SocketServer.sendall(str.encode(name_to + "<" + str(encrypt_text)))
+        elif name_to in groups:
+            encrypt_text = groups[name_to].encrypt(text, to_int)
+            SocketServer.sendall(str.encode(name_to + "<" + str(encrypt_text)))
+        else:
+            SocketServer.send(str.encode(value))
     elif value == "EXIT":
         SocketServer.send(str.encode(value))
         break
